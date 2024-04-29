@@ -1,0 +1,413 @@
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+import tensorflow as tf
+from tensorflow import keras
+from keras.preprocessing.image import ImageDataGenerator
+gen = ImageDataGenerator(rescale=1./255,validation_split = 0.2,zoom_range=(0.99,0.99),dtype=tf.float32)
+train = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                               target_size = (150,150),
+                               batch_size = 256,
+                               class_mode = "binary",
+                               color_mode = "rgb",
+                               shuffle = True,
+                               seed = 123,
+                               subset = "training")
+val = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                               target_size = (150,150),
+                               batch_size = 8,
+                               class_mode = "binary",
+                               color_mode = "rgb",
+                               shuffle = True,
+                               seed = 123,
+                               subset = "validation")
+classes = val.class_indices
+classes
+import seaborn as sns
+t=0
+h=0
+for i in range(15):
+    a, b = next(train)
+    for j in b:
+        if j == 1:
+            h+=1
+        else:t+=1
+
+sns.barplot(x=['tumor','healty'],y=[t,h])
+import matplotlib.pyplot as plt
+batch = next(train)
+
+plt.imshow(batch[0][0])
+from keras.layers import Conv2D, MaxPool2D, LeakyReLU, BatchNormalization, Dropout, Dense, InputLayer, Flatten
+from keras.losses import BinaryCrossentropy
+from keras.optimizers import Adam
+model = keras.Sequential()
+model.add(InputLayer(input_shape=(150,150,3)))
+model.add(Conv2D(filters=32,kernel_size=3, activation="relu", padding="same"))
+model.add(MaxPool2D())
+model.add(Conv2D(filters=64,kernel_size=3, activation="relu", padding="same"))
+model.add(MaxPool2D())   
+
+
+model.add(Flatten())
+
+
+model.add(Dense(128, activation='relu'))
+model.add(BatchNormalization())
+model.add(Dropout(rate=0.3))
+model.add(Dense(64, activation="relu"))
+model.add(BatchNormalization())
+model.add(Dropout(rate=0.3))
+model.add(Dense(1, activation="sigmoid"))
+model.compile(optimizer=Adam(0.001),loss = BinaryCrossentropy(),metrics=['accuracy'])
+tf.keras.utils.plot_model(
+    model, to_file='model.png', show_shapes=True,
+    show_layer_names=True,
+)
+from keras import utils, callbacks
+earlystopping = callbacks.EarlyStopping(monitor="val_loss", mode="min", 
+                                        patience=5, restore_best_weights = True)
+# Assuming you have defined and trained your model (named 'model') before this code snippet
+history = model.fit(train, verbose=1, callbacks=[earlystopping], epochs=20, validation_data=val)
+
+# Calculate accuracy
+accuracy = history.history['val_accuracy'][-1]
+print("Validation Accuracy:", accuracy)
+model.save('/kaggle/working/model_cnn.h5')
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.plot(history.history['loss'], label='loss')
+plt.plot(history.history['val_loss'], label = 'val_loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+# Import necessary libraries
+import numpy as np 
+import pandas as pd 
+import os
+import tensorflow as tf
+from tensorflow import keras
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Conv2D, MaxPool2D, Flatten, Dense, InputLayer
+from keras.models import Sequential
+from keras.losses import BinaryCrossentropy
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# Data preparation
+gen = ImageDataGenerator(rescale=1./255, validation_split=0.2, zoom_range=(0.99,0.99), dtype=tf.float32)
+
+train = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                               target_size=(150, 150),
+                               batch_size=256,
+                               class_mode="binary",
+                               color_mode="rgb",
+                               shuffle=True,
+                               seed=123,
+                               subset="training")
+
+val = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                               target_size=(150, 150),
+                               batch_size=8,
+                               class_mode="binary",
+                               color_mode="rgb",
+                               shuffle=True,
+                               seed=123,
+                               subset="validation")
+
+# CNN Model
+cnn_model = Sequential([
+    InputLayer(input_shape=(150, 150, 3)),
+    Conv2D(filters=32, kernel_size=3, activation="relu", padding="same"),
+    MaxPool2D(),
+    Conv2D(filters=64, kernel_size=3, activation="relu", padding="same"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(1, activation="sigmoid")
+])
+
+train
+train.labels
+
+cnn_model.compile(optimizer=Adam(0.001), loss=BinaryCrossentropy(), metrics=['accuracy'])
+cnn_model.summary()
+
+# SVM Model
+svm_model = SVC(kernel='linear', probability=True)
+
+
+# Transfer Learning Model (using a pre-trained model like VGG16)
+base_model = keras.applications.VGG16(weights='imagenet', include_top=False, input_shape=(150, 150, 3))
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten, Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import BinaryCrossentropy
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Assuming you have defined and trained base_model before this code snippet
+
+# Freeze the layers in base_model
+for layer in base_model.layers:
+    layer.trainable = False
+
+# Define transfer_model
+transfer_model = Sequential([
+    base_model,
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(1, activation="sigmoid")
+])
+
+# Compile transfer_model
+transfer_model.compile(optimizer=Adam(0.001), loss=BinaryCrossentropy(), metrics=['accuracy'])
+transfer_model.summary()
+
+# Assuming you have 'train' and 'val' datasets for training and validation
+
+# Train transfer_model
+transfer_history = transfer_model.fit(train, verbose=1, callbacks=[EarlyStopping(monitor="val_loss", mode="min", patience=5, restore_best_weights=True)], epochs=20, validation_data=val)
+
+# Calculate accuracy
+accuracy = transfer_history.history['val_accuracy'][-1]
+print("Validation Accuracy of the transfer_model:", accuracy)
+model.save('model_transfer.h5')
+import pandas as pd
+
+# Load your dataset into a DataFrame
+train_data_path = "/kaggle/input/brian-tumor-dataset/metadata_rgb_only.csv"
+train = pd.read_csv(train_data_path)
+
+# Display the column names
+print(train.columns)
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from joblib import dump
+
+# Data preparation
+gen = ImageDataGenerator(rescale=1./255, validation_split=0.2, zoom_range=(0.99, 0.99), dtype=tf.float32)
+
+train = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                                target_size=(150, 150),  # Adjusted target size
+                                batch_size=256,
+                                class_mode="binary",
+                                color_mode="rgb",
+                                shuffle=True,
+                                seed=123,
+                                subset="training")
+
+val = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                              target_size=(150, 150),  # Adjusted target size
+                              batch_size=8,
+                              class_mode="binary",
+                              color_mode="rgb",
+                              shuffle=True,
+                              seed=123,
+                              subset="validation")
+
+# Random Forest Model
+rf_model = RandomForestClassifier(n_estimators=50, random_state=123)  # Set n_estimators to a smaller value
+
+# Extract features and labels
+train_features, train_labels = next(train)
+val_features, val_labels = next(val)
+
+# Reshape features for Random Forest
+train_features = train_features.reshape(train_features.shape[0], -1)
+val_features = val_features.reshape(val_features.shape[0], -1)
+
+# Flatten labels for Random Forest
+train_labels = train_labels.flatten()
+val_labels = val_labels.flatten()
+
+# Train Random Forest model
+rf_model.fit(train_features, train_labels)
+
+# Evaluate Random Forest model
+rf_val_preds = rf_model.predict(val_features)
+rf_accuracy = accuracy_score(val_labels, rf_val_preds)
+print("Random Forest Model Accuracy:", rf_accuracy)
+
+# Save Random Forest model
+model_path = '/kaggle/working/random_forest_model.joblib'
+dump(rf_model, model_path)
+import numpy as np
+import pandas as pd
+import os
+import tensorflow as tf
+from tensorflow import keras
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Conv2D, MaxPool2D, Flatten, Dense, InputLayer
+from keras.models import Sequential, load_model
+from keras.losses import BinaryCrossentropy
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from joblib import dump
+
+# Data preparation
+gen = ImageDataGenerator(rescale=1./255, validation_split=0.2, zoom_range=(0.99, 0.99), dtype=tf.float32)
+
+train = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                                target_size=(150, 150),
+                                batch_size=256,
+                                class_mode="binary",
+                                color_mode="rgb",
+                                shuffle=True,
+                                seed=123,
+                                subset="training")
+
+val = gen.flow_from_directory("/kaggle/input/brian-tumor-dataset/Brain Tumor Data Set/Brain Tumor Data Set/",
+                              target_size=(150, 150),
+                              batch_size=8,
+                              class_mode="binary",
+                              color_mode="rgb",
+                              shuffle=True,
+                              seed=123,
+                              subset="validation")
+
+# CNN Model
+cnn_model = Sequential([
+    Conv2D(filters=32, kernel_size=3, activation="relu", padding="same", input_shape=(150, 150, 3)),
+    MaxPool2D(),
+    Conv2D(filters=64, kernel_size=3, activation="relu", padding="same"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(1, activation="sigmoid")
+])
+
+cnn_model.compile(optimizer=Adam(0.001), loss=BinaryCrossentropy(), metrics=['accuracy'])
+cnn_model.summary()
+
+# Training with early stopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+cnn_history = cnn_model.fit(train, epochs=20, validation_data=val, callbacks=[early_stopping])
+
+# Saving CNN model
+cnn_model.save('model_cnn.h5')
+
+# Random Forest Model
+rf_model = RandomForestClassifier(n_estimators=100, random_state=123)
+
+# Extract features and labels
+train_features, train_labels = next(train)
+val_features, val_labels = next(val)
+
+# Reshape features for Random Forest
+train_features = train_features.reshape(train_features.shape[0], -1)
+val_features = val_features.reshape(val_features.shape[0], -1)
+
+# Flatten labels for Random Forest
+train_labels = train_labels.flatten()
+val_labels = val_labels.flatten()
+
+# Train Random Forest model
+rf_model.fit(train_features, train_labels)
+
+# Evaluate Random Forest model
+rf_val_preds = rf_model.predict(val_features)
+rf_accuracy = accuracy_score(val_labels, rf_val_preds)
+print("Random Forest Model Accuracy:", rf_accuracy)
+
+# Save Random Forest model
+model_path = '/kaggle/working/random_forest_model.joblib'
+dump(rf_model, model_path)
+
+# Ensemble Model
+# Load CNN and transfer learning models
+cnn_model = load_model('model_cnn.h5')
+transfer_model = load_model('model_transfer.h5')
+
+# Generate predictions
+cnn_preds = cnn_model.predict(val)
+transfer_preds = (transfer_model.predict(val) > 0.5).astype("int32")
+rf_preds = rf_model.predict(val_features)
+
+# Reshape predictions if necessary
+if cnn_preds.ndim > 1:
+    cnn_preds = cnn_preds.flatten()
+if transfer_preds.ndim > 1:
+    transfer_preds = transfer_preds.flatten()
+if rf_preds.ndim > 1:
+    rf_preds = rf_preds.flatten()
+
+# Reshape predictions to match the shape of val_labels
+max_len = len(val_labels)
+
+cnn_preds = np.resize(cnn_preds, max_len)
+transfer_preds = np.resize(transfer_preds, max_len)
+rf_preds = np.resize(rf_preds, max_len)
+
+# Ensemble predictions
+ensemble_preds = np.round((cnn_preds + transfer_preds + rf_preds) / 3)
+ensemble_accuracy = accuracy_score(val_labels, ensemble_preds)
+print("Ensemble Model Accuracy:", ensemble_accuracy)
+
+
+plt.plot(cnn_history.history['accuracy'], label='ensemble_accuracy')
+plt.plot(cnn_history.history['val_accuracy'], label='val_ensemble_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.show()
+plt.plot(cnn_history.history['loss'], label='loss')
+plt.plot(cnn_history.history['val_loss'], label='val_loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.show()
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Concatenate, Input
+
+# Get the output shapes of the CNN and transfer learning models
+cnn_features = cnn_model.layers[-2].output_shape[1]
+transfer_features = transfer_model.layers[-2].output_shape[1]
+
+# Calculate the total number of features
+num_features = cnn_features + transfer_features
+
+# Create a combined model for ensemble prediction
+ensemble_input = Input(shape=(num_features,), name='ensemble_input')
+cnn_output = cnn_model.layers[-2].output  # Get the output of the last dense layer in CNN model
+transfer_output = transfer_model.layers[-2].output  # Get the output of the last dense layer in transfer learning model
+
+# Concatenate the outputs of CNN and transfer learning models with the ensemble input
+ensemble_output = Concatenate()([cnn_output, transfer_output, ensemble_input])
+
+# Add dense layers for final prediction
+ensemble_output = Dense(128, activation='relu')(ensemble_output)
+ensemble_output = Dense(1, activation='sigmoid')(ensemble_output)
+
+# Define the ensemble model
+ensemble_model = Model(inputs=[cnn_model.input, transfer_model.input, ensemble_input], outputs=ensemble_output)
+
+# Plot the architecture of the ensemble model
+plot_model(ensemble_model, to_file='ensemble_model.png', show_shapes=True, show_layer_names=True)
