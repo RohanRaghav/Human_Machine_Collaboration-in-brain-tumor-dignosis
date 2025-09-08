@@ -1,4 +1,5 @@
-🧠 Human-Machine Collaboration in Brain Tumor Diagnosis
+Human-Machine Collaboration in Brain Tumor Diagnosis
+
 🚀 Project Overview
 
 An AI-powered solution designed to assist radiologists in accurately detecting brain tumors using MRI scan data.
@@ -42,7 +43,3 @@ Model training using CNN architectures.
 Model evaluation using accuracy and loss metrics.
 
 Integration with visualization tools for easy interpretation of results.
-
-👤 Author
-
-Rohan Raghav
